@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"sync"
+	"time"
 )
 
 var (
@@ -22,20 +24,36 @@ func isDotInCircle(x, y float64) bool {
 }
 
 func main() {
+	var rw sync.RWMutex
 	iterationNumber, err := strconv.Atoi(os.Args[1])
 	if err != nil {
 		fmt.Println("Please provide a valid number")
 		return
 	}
-	for i := 0; i < iterationNumber; i++ {
-		x := rand.Float64()
-		y := rand.Float64()
-		if isDotInCircle(x, y) {
-			inCircleDots++
-		} else {
-			outCircleDots++
-		}
+	startTime := time.Now()
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			var inCircleDotss, outCircleDotss int
+			for i := 0; i < iterationNumber/10; i++ {
+				x := rand.Float64()
+				y := rand.Float64()
+				if isDotInCircle(x, y) {
+					inCircleDotss++
+				} else {
+					outCircleDotss++
+				}
+			}
+			rw.Lock()
+			inCircleDots += inCircleDotss
+			outCircleDots += outCircleDotss
+			rw.Unlock()
+			wg.Done()
+		}()
 	}
+	wg.Wait()
+	fmt.Println("Time taken: ", time.Since(startTime))
 
 	pi := 4 * float64(inCircleDots) / float64(inCircleDots+outCircleDots)
 	fmt.Println(pi)
